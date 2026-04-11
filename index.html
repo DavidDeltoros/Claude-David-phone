@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>What do you want to eat? 🍽️</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --wolt: #009DE0;
+      --wolt-dark: #0077A8;
+      --bg: #F5F7FA;
+      --card: #ffffff;
+      --text: #1A1A2E;
+      --muted: #6B7280;
+      --radius: 20px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--text);
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; width: 100%; max-width: 420px; animation: fadeIn .3s ease; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── START ── */
+    .logo { font-size: 72px; line-height: 1; }
+    h1 { font-size: 28px; font-weight: 800; text-align: center; color: var(--text); }
+    h1 span { color: var(--wolt); }
+    .subtitle { font-size: 16px; color: var(--muted); text-align: center; line-height: 1.5; }
+
+    /* ── BUTTON ── */
+    .btn {
+      width: 100%;
+      padding: 18px 24px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary {
+      background: var(--wolt);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(0,157,224,.35);
+    }
+    .btn-primary:hover { background: var(--wolt-dark); }
+    .btn-secondary {
+      background: var(--card);
+      color: var(--text);
+      border: 2px solid #E5E7EB;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-wrap { width: 100%; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 600;
+    }
+    .progress-bar {
+      width: 100%; height: 8px; background: #E5E7EB; border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--wolt); border-radius: 99px;
+      transition: width .4s ease;
+    }
+
+    /* ── QUIZ ── */
+    .question-label {
+      font-size: 15px; color: var(--muted); font-weight: 600; text-align: center; letter-spacing: .5px;
+    }
+    .versus { font-size: 13px; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+
+    .options { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+
+    .food-card {
+      background: var(--card);
+      border: 2.5px solid transparent;
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      transition: border-color .15s, transform .12s, box-shadow .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .food-card:hover {
+      border-color: var(--wolt);
+      box-shadow: 0 4px 24px rgba(0,157,224,.18);
+      transform: translateY(-2px);
+    }
+    .food-card:active { transform: scale(.98); }
+    .food-card.chosen {
+      border-color: var(--wolt);
+      background: #EAF7FF;
+    }
+    .food-card.rejected { opacity: .45; transform: scale(.97); }
+
+    .food-emoji { font-size: 52px; line-height: 1; }
+    .food-info { flex: 1; }
+    .food-name { font-size: 20px; font-weight: 800; color: var(--text); }
+    .food-desc { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+    .check-badge {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      width: 30px; height: 30px; background: var(--wolt); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 16px; opacity: 0;
+      transition: opacity .2s;
+    }
+    .food-card.chosen .check-badge { opacity: 1; }
+
+    .or-divider {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    }
+    .or-divider::before, .or-divider::after {
+      content: ''; flex: 1; height: 1px; background: #E5E7EB;
+    }
+
+    /* ── RESULTS ── */
+    .results-title { font-size: 24px; font-weight: 800; text-align: center; }
+    .results-sub { font-size: 15px; color: var(--muted); text-align: center; }
+
+    .ranking { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+    .rank-item {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.05);
+      animation: slideIn .4s ease both;
+    }
+    .rank-item:nth-child(1) { animation-delay: .05s; }
+    .rank-item:nth-child(2) { animation-delay: .12s; }
+    .rank-item:nth-child(3) { animation-delay: .19s; }
+    .rank-item:nth-child(4) { animation-delay: .26s; }
+    .rank-item:nth-child(5) { animation-delay: .33s; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+
+    .rank-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; flex-shrink: 0;
+    }
+    .rank-1 .rank-num { background: #FEF3C7; color: #D97706; }
+    .rank-2 .rank-num { background: #F3F4F6; color: #6B7280; }
+    .rank-3 .rank-num { background: #FEF3C7; color: #B45309; }
+    .rank-other .rank-num { background: #F9FAFB; color: #9CA3AF; }
+
+    .rank-emoji { font-size: 36px; line-height: 1; }
+    .rank-info { flex: 1; }
+    .rank-name { font-size: 16px; font-weight: 700; }
+    .rank-score { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .rank-bar-wrap { width: 100%; height: 5px; background: #F3F4F6; border-radius: 99px; overflow: hidden; margin-top: 6px; }
+    .rank-bar { height: 100%; background: var(--wolt); border-radius: 99px; }
+
+    .winner-crown { font-size: 48px; text-align: center; animation: bounce .6s ease infinite alternate; }
+    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+
+    .wolt-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: #009DE0; color: #fff;
+      text-decoration: none; border-radius: var(--radius);
+      padding: 18px 24px; font-size: 17px; font-weight: 700;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0,157,224,.35);
+      transition: background .15s, transform .12s;
+    }
+    .wolt-btn:active { transform: scale(.97); }
+    .wolt-btn:hover { background: #0077A8; }
+
+    .restart-link {
+      font-size: 14px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: -8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════ START SCREEN ══════════ -->
+<div id="screen-start" class="screen active">
+  <div class="logo">🍽️</div>
+  <h1>What do you want to eat<span>?</span></h1>
+  <p class="subtitle">Pick between two options — we'll figure out what you're craving in under a minute.</p>
+  <button class="btn btn-primary" onclick="startQuiz()">Let's find out →</button>
+</div>
+
+<!-- ══════════ QUIZ SCREEN ══════════ -->
+<div id="screen-quiz" class="screen">
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span id="progress-text">Question 1 of 12</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <p class="question-label">TAP YOUR CRAVING</p>
+
+  <div class="options">
+    <div class="food-card" id="card-a" onclick="choose('a')">
+      <div class="food-emoji" id="emoji-a">🍕</div>
+      <div class="food-info">
+        <div class="food-name" id="name-a">Pizza</div>
+        <div class="food-desc" id="desc-a">Crispy crust, gooey cheese</div>
+      </div>
+      <div class="check-badge">✓</div>
+    </div>
+
+    <div class="or-divider">OR</div>
+
+    <div class="food-card" id="card-b" onclick="choose('b')">
+      <div class="food-emoji" id="emoji-b">🍣</div>
+      <div class="food-info">
+        <div class="food-name" id="name-b">Sushi</div>
+        <div class="food-desc" id="desc-b">Fresh rolls & sashimi</div>
+      </div>
+      <div class="check-badge">✓</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ RESULTS SCREEN ══════════ -->
+<div id="screen-results" class="screen">
+  <div class="winner-crown">🏆</div>
+  <div class="results-title">You want…</div>
+  <div class="results-sub" id="results-winner-name" style="font-size:22px;font-weight:800;color:var(--wolt);margin-top:-8px;"></div>
+  <p class="results-sub">Here's your full ranking:</p>
+
+  <div class="ranking" id="ranking-list"></div>
+
+  <a class="wolt-btn" href="https://wolt.com/sr/srb" target="_blank" rel="noopener">
+    🟦 Order on Wolt Serbia
+  </a>
+  <span class="restart-link" onclick="restart()">↩ Start over</span>
+</div>
+
+<script>
+  const FOODS = [
+    { id: 'pizza',     emoji: '🍕', name: 'Pizza',          desc: 'Crispy crust, gooey cheese' },
+    { id: 'sushi',     emoji: '🍣', name: 'Sushi',          desc: 'Fresh rolls & sashimi' },
+    { id: 'burger',    emoji: '🍔', name: 'Burger',         desc: 'Juicy patty & fries' },
+    { id: 'shawarma',  emoji: '🌯', name: 'Shawarma',       desc: 'Wrap packed with grilled meat' },
+    { id: 'pasta',     emoji: '🍝', name: 'Pasta',          desc: 'Creamy, tomato or pesto' },
+    { id: 'pljeskavica',emoji:'🥩', name: 'Pljeskavica',    desc: 'Classic Serbian grill' },
+    { id: 'chinese',   emoji: '🥡', name: 'Chinese',        desc: 'Noodles, dumplings & stir-fry' },
+    { id: 'ramen',     emoji: '🍜', name: 'Ramen',          desc: 'Rich broth & soft noodles' },
+    { id: 'indian',    emoji: '🍛', name: 'Indian',         desc: 'Curry, naan & spices' },
+    { id: 'salad',     emoji: '🥗', name: 'Salad',          desc: 'Fresh, light & healthy' },
+    { id: 'tacos',     emoji: '🌮', name: 'Tacos / Mexican',desc: 'Spicy, bold street food' },
+    { id: 'steak',     emoji: '🥩', name: 'Steak',          desc: 'Grilled to perfection' },
+  ];
+
+  const TOTAL_ROUNDS = 12;
+
+  let scores = {};
+  let pairs  = [];
+  let round  = 0;
+  let locked = false;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildPairs() {
+    // Generate TOTAL_ROUNDS unique-ish pairs, spreading coverage
+    const result = [];
+    const ids = FOODS.map(f => f.id);
+    let pool = [];
+
+    while (result.length < TOTAL_ROUNDS) {
+      if (pool.length < 2) pool = shuffle(ids);
+      const a = pool.shift();
+      let bIdx = pool.findIndex(x => x !== a);
+      if (bIdx === -1) { pool.push(a); pool = shuffle(ids.filter(x => x !== a)); bIdx = 0; }
+      const b = pool.splice(bIdx, 1)[0];
+      // Avoid immediate duplicate pair
+      const last = result[result.length - 1];
+      if (last && ((last[0] === a && last[1] === b) || (last[0] === b && last[1] === a))) {
+        pool.unshift(b); // put b back and retry
+        pool.push(a);
+        continue;
+      }
+      result.push([a, b]);
+    }
+    return result;
+  }
+
+  function startQuiz() {
+    scores = {};
+    FOODS.forEach(f => scores[f.id] = 0);
+    pairs  = buildPairs();
+    round  = 0;
+    locked = false;
+    showScreen('quiz');
+    renderRound();
+  }
+
+  function renderRound() {
+    const [idA, idB] = pairs[round];
+    const fA = FOODS.find(f => f.id === idA);
+    const fB = FOODS.find(f => f.id === idB);
+
+    document.getElementById('emoji-a').textContent = fA.emoji;
+    document.getElementById('name-a').textContent  = fA.name;
+    document.getElementById('desc-a').textContent  = fA.desc;
+
+    document.getElementById('emoji-b').textContent = fB.emoji;
+    document.getElementById('name-b').textContent  = fB.name;
+    document.getElementById('desc-b').textContent  = fB.desc;
+
+    const cardA = document.getElementById('card-a');
+    const cardB = document.getElementById('card-b');
+    cardA.classList.remove('chosen', 'rejected');
+    cardB.classList.remove('chosen', 'rejected');
+
+    const pct = Math.round((round / TOTAL_ROUNDS) * 100);
+    document.getElementById('progress-text').textContent = `Question ${round + 1} of ${TOTAL_ROUNDS}`;
+    document.getElementById('progress-pct').textContent  = pct + '%';
+    document.getElementById('progress-fill').style.width = pct + '%';
+
+    locked = false;
+  }
+
+  function choose(side) {
+    if (locked) return;
+    locked = true;
+
+    const [idA, idB] = pairs[round];
+    const winnerId   = side === 'a' ? idA : idB;
+    const loserId    = side === 'a' ? idB : idA;
+
+    scores[winnerId] += 1;
+
+    document.getElementById('card-' + side).classList.add('chosen');
+    document.getElementById('card-' + (side === 'a' ? 'b' : 'a')).classList.add('rejected');
+
+    setTimeout(() => {
+      round++;
+      if (round >= TOTAL_ROUNDS) {
+        showResults();
+      } else {
+        renderRound();
+      }
+    }, 420);
+  }
+
+  function showResults() {
+    const ranked = FOODS
+      .map(f => ({ ...f, score: scores[f.id] }))
+      .sort((a, b) => b.score - a.score);
+
+    const maxScore = ranked[0].score || 1;
+
+    document.getElementById('results-winner-name').textContent = ranked[0].emoji + '  ' + ranked[0].name;
+
+    const list = document.getElementById('ranking-list');
+    list.innerHTML = '';
+
+    ranked.slice(0, 5).forEach((f, i) => {
+      const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+      const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const barPct    = Math.round((f.score / maxScore) * 100);
+
+      const el = document.createElement('div');
+      el.className = `rank-item ${rankClass}`;
+      el.innerHTML = `
+        <div class="rank-num">${rankLabel}</div>
+        <div class="rank-emoji">${f.emoji}</div>
+        <div class="rank-info">
+          <div class="rank-name">${f.name}</div>
+          <div class="rank-bar-wrap"><div class="rank-bar" style="width:${barPct}%"></div></div>
+          <div class="rank-score">${f.score} win${f.score !== 1 ? 's' : ''}</div>
+        </div>
+      `;
+      list.appendChild(el);
+    });
+
+    showScreen('results');
+  }
+
+  function restart() {
+    showScreen('start');
+  }
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+  }
+</script>
+</body>
+</html>
