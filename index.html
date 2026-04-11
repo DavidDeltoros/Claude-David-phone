@@ -192,6 +192,20 @@
     .restart-link {
       font-size: 14px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: -8px;
     }
+
+    .btn-none {
+      background: transparent;
+      color: var(--muted);
+      border: 1.5px dashed #D1D5DB;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 24px;
+      width: 100%;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-none:hover { color: #EF4444; border-color: #EF4444; }
   </style>
 </head>
 <body>
@@ -208,7 +222,7 @@
 <div id="screen-quiz" class="screen">
   <div class="progress-wrap">
     <div class="progress-label">
-      <span id="progress-text">Question 1 of 12</span>
+      <span id="progress-text">Question 1 of 14</span>
       <span id="progress-pct">0%</span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
@@ -236,6 +250,8 @@
       </div>
       <div class="check-badge">✓</div>
     </div>
+
+    <button class="btn btn-none" onclick="chooseNone()">✕ Neither — skip both</button>
   </div>
 </div>
 
@@ -255,27 +271,32 @@
 </div>
 
 <script>
-  const FOODS = [
-    { id: 'pizza',     emoji: '🍕', name: 'Pizza',          desc: 'Crispy crust, gooey cheese' },
-    { id: 'sushi',     emoji: '🍣', name: 'Sushi',          desc: 'Fresh rolls & sashimi' },
-    { id: 'burger',    emoji: '🍔', name: 'Burger',         desc: 'Juicy patty & fries' },
-    { id: 'shawarma',  emoji: '🌯', name: 'Shawarma',       desc: 'Wrap packed with grilled meat' },
-    { id: 'pasta',     emoji: '🍝', name: 'Pasta',          desc: 'Creamy, tomato or pesto' },
-    { id: 'pljeskavica',emoji:'🥩', name: 'Pljeskavica',    desc: 'Classic Serbian grill' },
-    { id: 'chinese',   emoji: '🥡', name: 'Chinese',        desc: 'Noodles, dumplings & stir-fry' },
-    { id: 'ramen',     emoji: '🍜', name: 'Ramen',          desc: 'Rich broth & soft noodles' },
-    { id: 'indian',    emoji: '🍛', name: 'Indian',         desc: 'Curry, naan & spices' },
-    { id: 'salad',     emoji: '🥗', name: 'Salad',          desc: 'Fresh, light & healthy' },
-    { id: 'tacos',     emoji: '🌮', name: 'Tacos / Mexican',desc: 'Spicy, bold street food' },
-    { id: 'steak',     emoji: '🥩', name: 'Steak',          desc: 'Grilled to perfection' },
+  const ALL_FOODS = [
+    { id: 'pizza',        emoji: '🍕', name: 'Pizza',           desc: 'Crispy crust, gooey mozzarella' },
+    { id: 'sushi',        emoji: '🍣', name: 'Sushi',           desc: 'Fresh rolls & sashimi' },
+    { id: 'burger',       emoji: '🍔', name: 'Smash Burger',    desc: 'Crispy edges, melted cheese' },
+    { id: 'shawarma',     emoji: '🌯', name: 'Shawarma',        desc: 'Spiced meat in a warm wrap' },
+    { id: 'carbonara',    emoji: '🍝', name: 'Pasta Carbonara', desc: 'Creamy egg sauce, crispy pancetta' },
+    { id: 'pljeskavica',  emoji: '🥩', name: 'Pljeskavica',     desc: 'Classic Serbian grilled meat' },
+    { id: 'dumplings',    emoji: '🥟', name: 'Dumplings',       desc: 'Pan-fried or steamed, juicy inside' },
+    { id: 'padthai',      emoji: '🍜', name: 'Pad Thai',        desc: 'Rice noodles, peanuts, tamarind' },
+    { id: 'butterchicken',emoji: '🍛', name: 'Butter Chicken',  desc: 'Rich tomato-cream curry & naan' },
+    { id: 'ramen',        emoji: '🍜', name: 'Ramen',           desc: 'Deep broth, soft egg, noodles' },
+    { id: 'tacos',        emoji: '🌮', name: 'Tacos',           desc: 'Corn tortilla, salsa, fresh toppings' },
+    { id: 'burrito',      emoji: '🫔', name: 'Burrito',         desc: 'Stuffed flour wrap, beans & rice' },
+    { id: 'poke',         emoji: '🍱', name: 'Poke Bowl',       desc: 'Fresh fish, rice, avocado, sauce' },
+    { id: 'friedchicken', emoji: '🍗', name: 'Fried Chicken',   desc: 'Crispy coating, juicy inside' },
+    { id: 'falafel',      emoji: '🧆', name: 'Falafel Wrap',    desc: 'Crispy chickpea balls, tahini' },
+    { id: 'stir_fry',     emoji: '🥢', name: 'Stir-Fry Noodles',desc: 'Wok-tossed veggies & noodles' },
   ];
 
-  const TOTAL_ROUNDS = 12;
+  const TOTAL_ROUNDS = 14;
 
-  let scores = {};
-  let pairs  = [];
-  let round  = 0;
-  let locked = false;
+  let scores    = {};
+  let eliminated = new Set();
+  let round     = 0;
+  let locked    = false;
+  let currentPair = [];
 
   function shuffle(arr) {
     const a = [...arr];
@@ -286,45 +307,43 @@
     return a;
   }
 
-  function buildPairs() {
-    // Generate TOTAL_ROUNDS unique-ish pairs, spreading coverage
-    const result = [];
-    const ids = FOODS.map(f => f.id);
-    let pool = [];
+  function activeFoods() {
+    return ALL_FOODS.filter(f => !eliminated.has(f.id));
+  }
 
-    while (result.length < TOTAL_ROUNDS) {
-      if (pool.length < 2) pool = shuffle(ids);
-      const a = pool.shift();
-      let bIdx = pool.findIndex(x => x !== a);
-      if (bIdx === -1) { pool.push(a); pool = shuffle(ids.filter(x => x !== a)); bIdx = 0; }
-      const b = pool.splice(bIdx, 1)[0];
-      // Avoid immediate duplicate pair
-      const last = result[result.length - 1];
-      if (last && ((last[0] === a && last[1] === b) || (last[0] === b && last[1] === a))) {
-        pool.unshift(b); // put b back and retry
-        pool.push(a);
-        continue;
-      }
-      result.push([a, b]);
+  function nextPair() {
+    const active = activeFoods();
+    if (active.length < 2) return null;
+    const shuffled = shuffle(active);
+    let a = shuffled[0], b = shuffled[1];
+    if (currentPair.length === 2 &&
+        ((currentPair[0] === a.id && currentPair[1] === b.id) ||
+         (currentPair[0] === b.id && currentPair[1] === a.id))) {
+      b = shuffled[2] || shuffled[1];
     }
-    return result;
+    return [a, b];
   }
 
   function startQuiz() {
-    scores = {};
-    FOODS.forEach(f => scores[f.id] = 0);
-    pairs  = buildPairs();
-    round  = 0;
-    locked = false;
+    scores     = {};
+    eliminated = new Set();
+    ALL_FOODS.forEach(f => scores[f.id] = 0);
+    round      = 0;
+    locked     = false;
+    currentPair = [];
     showScreen('quiz');
-    renderRound();
+    loadNextPair();
   }
 
-  function renderRound() {
-    const [idA, idB] = pairs[round];
-    const fA = FOODS.find(f => f.id === idA);
-    const fB = FOODS.find(f => f.id === idB);
+  function loadNextPair() {
+    const pair = nextPair();
+    if (!pair) { showResults(); return; }
+    currentPair = [pair[0].id, pair[1].id];
+    renderPair(pair[0], pair[1]);
+    locked = false;
+  }
 
+  function renderPair(fA, fB) {
     document.getElementById('emoji-a').textContent = fA.emoji;
     document.getElementById('name-a').textContent  = fA.name;
     document.getElementById('desc-a').textContent  = fA.desc;
@@ -333,49 +352,70 @@
     document.getElementById('name-b').textContent  = fB.name;
     document.getElementById('desc-b').textContent  = fB.desc;
 
-    const cardA = document.getElementById('card-a');
-    const cardB = document.getElementById('card-b');
-    cardA.classList.remove('chosen', 'rejected');
-    cardB.classList.remove('chosen', 'rejected');
+    document.getElementById('card-a').classList.remove('chosen', 'rejected');
+    document.getElementById('card-b').classList.remove('chosen', 'rejected');
 
-    const pct = Math.round((round / TOTAL_ROUNDS) * 100);
+    const pct = Math.min(100, Math.round((round / TOTAL_ROUNDS) * 100));
     document.getElementById('progress-text').textContent = `Question ${round + 1} of ${TOTAL_ROUNDS}`;
     document.getElementById('progress-pct').textContent  = pct + '%';
     document.getElementById('progress-fill').style.width = pct + '%';
-
-    locked = false;
   }
 
   function choose(side) {
     if (locked) return;
     locked = true;
 
-    const [idA, idB] = pairs[round];
-    const winnerId   = side === 'a' ? idA : idB;
-    const loserId    = side === 'a' ? idB : idA;
-
+    const winnerId = side === 'a' ? currentPair[0] : currentPair[1];
     scores[winnerId] += 1;
 
     document.getElementById('card-' + side).classList.add('chosen');
     document.getElementById('card-' + (side === 'a' ? 'b' : 'a')).classList.add('rejected');
 
+    round++;
     setTimeout(() => {
-      round++;
-      if (round >= TOTAL_ROUNDS) {
+      if (round >= TOTAL_ROUNDS || activeFoods().length < 2) {
         showResults();
       } else {
-        renderRound();
+        loadNextPair();
       }
     }, 420);
   }
 
+  function chooseNone() {
+    if (locked) return;
+    locked = true;
+
+    eliminated.add(currentPair[0]);
+    eliminated.add(currentPair[1]);
+
+    document.getElementById('card-a').classList.add('rejected');
+    document.getElementById('card-b').classList.add('rejected');
+
+    round++;
+    setTimeout(() => {
+      if (activeFoods().length < 2 || round >= TOTAL_ROUNDS) {
+        showResults();
+      } else {
+        loadNextPair();
+      }
+    }, 380);
+  }
+
   function showResults() {
-    const ranked = FOODS
+    const ranked = ALL_FOODS
+      .filter(f => !eliminated.has(f.id))
       .map(f => ({ ...f, score: scores[f.id] }))
       .sort((a, b) => b.score - a.score);
 
-    const maxScore = ranked[0].score || 1;
+    if (ranked.length === 0) {
+      document.getElementById('results-winner-name').textContent = '🤷 Nothing?';
+      document.getElementById('ranking-list').innerHTML =
+        '<p style="text-align:center;color:var(--muted);font-size:15px;">You skipped everything!<br>Maybe just order fries.</p>';
+      showScreen('results');
+      return;
+    }
 
+    const maxScore = ranked[0].score || 1;
     document.getElementById('results-winner-name').textContent = ranked[0].emoji + '  ' + ranked[0].name;
 
     const list = document.getElementById('ranking-list');
@@ -403,9 +443,7 @@
     showScreen('results');
   }
 
-  function restart() {
-    showScreen('start');
-  }
+  function restart() { showScreen('start'); }
 
   function showScreen(name) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
