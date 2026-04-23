@@ -15,6 +15,7 @@
 5. **No silent errors.** Never swallow exceptions to "make it work". Surface them.
 6. **One PR = one intent.** Bug fixes do not smuggle in refactors.
 7. **Context hygiene is mandatory.** At 60% context usage, stop and hand off (see §7).
+8. **Reply length cap (HARD).** Every reply to the user ≤ 25–40 seconds of reading (~80–130 words). Short bullets over paragraphs. No restating the question, no filler. If more is truly needed — give TL;DR first, then ask before expanding. Code blocks and diffs do not count toward the limit. End-of-turn summary: 1 sentence.
 
 ---
 
